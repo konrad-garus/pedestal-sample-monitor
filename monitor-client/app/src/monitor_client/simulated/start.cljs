@@ -12,11 +12,6 @@
     (.getParameterValue uri name)))
 
 (defn ^:export main []
-  ;; Create an application which uses the data renderer. The :data-ui
-  ;; aspect is configured to run this main function. See
-  ;;
-  ;; config/config.edn
-  ;;
   (start/create-app (if (= "auto" (param "renderer"))
                       d/data-renderer-config
                       (rendering/render-config))))

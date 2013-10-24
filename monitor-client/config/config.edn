@@ -79,7 +79,9 @@
                       ;; build output goes to tools/out/public
                       :output-root :tools-public
                       ;; The data-ui aspect uses the tooling.html template
-                      :template "tooling.html"}
+                      :template "tooling.html"
+                      :compiler-options {:optimizations :whitespace
+                                             :pretty-print true}}
             ;; Useful for viewing rendering output with a simulated start
             :ui  {:uri  "/monitor-client-ui.html"
                   :name  "UI"
@@ -89,13 +91,26 @@
                   :recording? true
                   :output-root :tools-public
                   :template "tooling.html"
-                  :order 3}
+                  :order 3
+                  :compiler-options {:optimizations :whitespace
+                                             :pretty-print true}
+                  }
             :development {:uri "/monitor-client-dev.html"
                           :name "Development"
                           :out-file "monitor-client-dev.js"
                           :main monitor_client.start
                           :logging? true
                           :order 4}
+            :dev-simulated {:uri "/monitor-client-dev-sim.html"
+                          :name "Development - Simulated"
+                          :out-file "monitor-client-dev-sim.js"
+                          :main monitor_client.simulated.start
+                          :recording? true
+                          :logging? true
+                          :order 4
+                          :compiler-options {:optimizations :simple
+                                             :pretty-print true}
+                          }
             :fresh {:uri "/fresh.html"
                     :name "Fresh"
                     :out-file "fresh.js"
