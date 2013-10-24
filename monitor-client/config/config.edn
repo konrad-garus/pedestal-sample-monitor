@@ -80,7 +80,7 @@
                       :output-root :tools-public
                       ;; The data-ui aspect uses the tooling.html template
                       :template "tooling.html"
-                      :compiler-options {:optimizations :whitespace
+                      :compiler-options {:optimizations :simple
                                              :pretty-print true}}
             ;; Useful for viewing rendering output with a simulated start
             :ui  {:uri  "/monitor-client-ui.html"
