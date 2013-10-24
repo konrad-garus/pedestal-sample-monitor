@@ -10,6 +10,8 @@
 (defn rand-normal-int [mean sigma]
   (int (rand-normal mean sigma)))
 
+(def step (atom 0))
+
 (defn positive [n] (Math/max n 0))
 
 (def received-count (atom 0))
@@ -21,7 +23,9 @@
 (def frequency-ms 1000)
 
 (defn advance-state []
-  (swap! received-count + (positive (rand-normal-int received-mean received-sigma))))
+  (swap! step + .5)
+  (let [received-mean (+ received-mean (* 5 (Math/sin @step)))]
+    (swap! received-count + (positive (rand-normal-int received-mean received-sigma)))))
 
 (defn receive-messages [input-queue]
   (advance-state)
