@@ -51,8 +51,7 @@
 
 (def monitor-app
   {:version 2
-   :transform [[:set-value [:received :count] set-count]
-               [:set-value [:processed :count] set-count]
+   :transform [[:set-value [:**] set-count]
                [:start [:connected] connect]]
    :derive #{
              [#{[:received :count]} [:received :tps] derive-tps]
@@ -61,8 +60,7 @@
              
              [#{[:processed :count]} [:processed :tps] derive-tps]
              [#{[:processed :tps]} [:processed :tps-history] derive-history :single-val]}
-   :emit [{:in #{[:received :tps-history]
-                 [:processed :tps-history]}
+   :emit [{:in #{[:* :tps-history]}
            :fn emit-tps-history
            :init init-tps-history}
           
