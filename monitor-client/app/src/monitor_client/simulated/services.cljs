@@ -15,10 +15,12 @@
 (defn positive [n] (Math/max n 0))
 
 (def received-count (atom 0))
-
 (def received-mean 10)
-
 (def received-sigma 2)
+
+(def processed-count (atom 0))
+(def processed-mean 10)
+(def processed-sigma 1)
 
 (def frequency-ms 1000)
 
@@ -27,7 +29,11 @@
 (defn advance-state []
   (swap! step + .5)
   (let [received-mean (+ received-mean (* 5 (Math/sin @step)))]
-    (swap! received-count + (positive (rand-normal-int received-mean received-sigma)))))
+    (swap! received-count + (positive (rand-normal-int received-mean received-sigma))))
+  (let [to-process (- @received-count @processed-count)
+        delta (positive (rand-normal-int processed-mean processed-sigma))
+        delta (Math/min delta to-process)]
+    (swap! processed-count + delta)))
 
 (defn receive-messages [input-queue]
   (advance-state)
@@ -36,7 +42,10 @@
     (when @connected
       (p/put-message input-queue {msg/type :set-value
                                   msg/topic [:received :count]
-                                  :value @received-count :tstamp ts-seconds })))
+                                  :value @received-count :tstamp ts-seconds })
+      (p/put-message input-queue {msg/type :set-value
+                                  msg/topic [:processed :count]
+                                  :value @processed-count :tstamp ts-seconds })))
   
   (platform/create-timeout frequency-ms #(receive-messages input-queue)))
 

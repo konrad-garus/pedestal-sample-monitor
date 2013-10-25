@@ -5,7 +5,7 @@
 
 (def history-entries 60)
 
-(defn set-received-count [old message]
+(defn set-count [old message]
   (let [{:keys [tstamp value]} message]
     [tstamp value]))
 
@@ -15,21 +15,27 @@
 (defn toggle-simulation-running [old-value msg]
   (not old-value))
 
-(defn derive-received-tps [_ {:keys [old-model new-model]}]
-  (if-let [[_ old-count] (get-in old-model [:received :count])]
-    (let [[new-time new-count] (get-in new-model [:received :count])]
-      [new-time (- new-count old-count)])))
+(defn derive-tps [_ {:keys [old-model new-model input-paths] :as v}]
+  (let [input-path (first input-paths)]
+    (if-let [[_ old-count] (get-in old-model input-path)]
+      (let [[new-time new-count] (get-in new-model input-path)]
+        [new-time (- new-count old-count)]))))
 
 (defn derive-history [old val]
   (when val
     (let [history (concat old [val])]
       (take-last history-entries history))))
 
-(defn init-recd-tps-history []
-  [[:node-create [:received-tps] :map]])
+(defn init-tps-history []
+  [[:node-create [:tps] :map]])
 
-(defn emit-recd-tps-history [{:keys [old-model new-model]}]
-  [[:value [:received-tps] (get-in new-model [:received :tps-history])]])
+(defn emit-tps-history [{:keys [old-model new-model]}]
+  (let [recd (get-in new-model [:received :tps-history])
+        processed (get-in new-model [:processed :tps-history])
+        [last-recd-ts _] (last recd)
+        [last-processed-ts _] (last processed)]
+    (when (= last-recd-ts last-processed-ts)
+      [[:value [:tps] {:received recd :processed processed}]])))
 
 (defn init-connected [arg]
   [[:transform-enable [:connected] :start
@@ -45,15 +51,20 @@
 
 (def monitor-app
   {:version 2
-   :transform [[:set-value [:received :count] set-received-count]
+   :transform [[:set-value [:received :count] set-count]
+               [:set-value [:processed :count] set-count]
                [:start [:connected] connect]]
    :derive #{
-             [#{[:received :count]} [:received :tps] derive-received-tps]
+             [#{[:received :count]} [:received :tps] derive-tps]
              [#{[:received :tps]} [:received :tps-history] derive-history :single-val]
-             [#{[:received :count]} [:received :count-history] derive-history :single-val]}
-   :emit [{:in #{[:received :tps-history]}
-           :fn emit-recd-tps-history
-           :init init-recd-tps-history}
+             [#{[:received :count]} [:received :count-history] derive-history :single-val]
+             
+             [#{[:processed :count]} [:processed :tps] derive-tps]
+             [#{[:processed :tps]} [:processed :tps-history] derive-history :single-val]}
+   :emit [{:in #{[:received :tps-history]
+                 [:processed :tps-history]}
+           :fn emit-tps-history
+           :init init-tps-history}
           
           {:in #{[:connected]}
            :fn emit-connected
