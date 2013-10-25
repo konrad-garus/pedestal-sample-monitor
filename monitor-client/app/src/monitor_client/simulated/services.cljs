@@ -22,6 +22,8 @@
 
 (def frequency-ms 1000)
 
+(def connected (atom false))
+
 (defn advance-state []
   (swap! step + .5)
   (let [received-mean (+ received-mean (* 5 (Math/sin @step)))]
@@ -31,9 +33,10 @@
   (advance-state)
   (let [ts (.getTime (js/Date.))
         ts-seconds (* (int (/ ts 1000)) 1000)]
-    (p/put-message input-queue {msg/type :set-value
-                                msg/topic [:received :count]
-                                :value @received-count :tstamp ts-seconds }))
+    (when @connected
+      (p/put-message input-queue {msg/type :set-value
+                                  msg/topic [:received :count]
+                                  :value @received-count :tstamp ts-seconds })))
   
   (platform/create-timeout frequency-ms #(receive-messages input-queue)))
 
@@ -42,3 +45,8 @@
   (start [this]
     (receive-messages (:input app)))
   (stop [this]))
+
+(defn services-fn [message input-queue]
+  (.log js/console (str "Sending message to server: " message))
+  (case (msg/topic message)
+    [:connect] (reset! connected (:value message))))

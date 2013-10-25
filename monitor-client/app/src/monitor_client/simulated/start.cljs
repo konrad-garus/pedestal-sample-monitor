@@ -6,7 +6,9 @@
             ;; This needs to be included somewhere in order for the
             ;; tools to work.
             [io.pedestal.app-tools.tooling :as tooling]
+            [io.pedestal.app :as app]
             [io.pedestal.app.protocols :as p]
+            [io.pedestal.app.messages :as msg]
             [monitor-client.simulated.services :as services]))
 
 (defn param [name]
@@ -19,7 +21,9 @@
                         d/data-renderer-config
                         (rendering/render-config))
         app (start/create-app render-config)
+        input-queue (get-in app [:app :input])
         services (services/->MockServices (:app app))]
+    (app/consume-effects (:app app) services/services-fn)
     (p/start services)
     (.log js/console "Services started")
     app))
