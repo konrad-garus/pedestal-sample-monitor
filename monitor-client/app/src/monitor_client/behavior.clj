@@ -26,6 +26,13 @@
     (let [history (concat old [val])]
       (take-last history-entries history))))
 
+(defn derive-backlog [old {:keys [received processed]}]
+  (let [[received-ts received-count] received
+        [processed-ts processed-count] processed]
+    (if (= received-ts processed-ts)
+      [received-ts (- received-count processed-count)]
+      old)))
+
 (defn init-tps-history []
   [[:node-create [:tps] :map]])
 
@@ -36,6 +43,14 @@
         [last-processed-ts _] (last processed)]
     (when (= last-recd-ts last-processed-ts)
       [[:value [:tps] {:received recd :processed processed}]])))
+
+(defn init-backlog-history []
+  [[:node-create [:backlog] :map]])
+
+(defn emit-backlog-history [{:keys [input-paths new-model] :as v}]
+  (let [in-path (first input-paths)
+        val (get-in new-model in-path)]
+    (when val [[:value [:backlog] val]])))
 
 (defn init-connected [arg]
   [[:transform-enable [:connected] :start
@@ -59,10 +74,21 @@
              [#{[:received :count]} [:received :count-history] derive-history :single-val]
              
              [#{[:processed :count]} [:processed :tps] derive-tps]
-             [#{[:processed :tps]} [:processed :tps-history] derive-history :single-val]}
+             [#{[:processed :tps]} [:processed :tps-history] derive-history :single-val]
+             
+             [{[:received :count] :received, [:processed :count] :processed} 
+              [:backlog :count] 
+              derive-backlog :map]
+             
+             [#{[:backlog :count]} [:backlog :count-history] derive-history :single-val]
+             }
    :emit [{:in #{[:* :tps-history]}
            :fn emit-tps-history
            :init init-tps-history}
+          
+          {:in #{[:backlog :count-history]}
+           :fn emit-backlog-history
+           :init init-backlog-history}
           
           {:in #{[:connected]}
            :fn emit-connected
