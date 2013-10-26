@@ -10,6 +10,11 @@
 	height: 200px;
 }
 
+#server_tps {
+	width: 600px;
+	height: 200px;
+}
+
 #content {
   margin-top: 30px;
 }

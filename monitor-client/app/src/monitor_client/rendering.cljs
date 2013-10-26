@@ -41,6 +41,16 @@
           [last-time _] (last new-value)]
       (render-chart data last-time "#backlog"))))
 
+(defn render-server-tps-chart [_ [_ _ _ new-value] _]
+  (when (not-empty new-value)
+    (let [data (map 
+                 (fn [[server values]] 
+                   {:label (str server " TPS") :data values}) 
+                 new-value)
+          [server values] (first new-value) 
+          [last-time _] (last values)]
+      (render-chart data last-time "#server_tps"))))
+
 (defn hide-connect-button [_ _ _]
   (.hide ($ :#connect_button)))
 
@@ -50,6 +60,9 @@
    
    [:node-create [:backlog] (prepare-chart "#backlog")]
    [:value [:backlog] render-backlog-chart]
+   
+   [:node-create [:server-tps] (prepare-chart "#server_tps")]
+   [:value [:server-tps] render-server-tps-chart]
    
    [:transform-enable [:connected] (h/add-send-on-click "connect_button")]
    [:transform-disable [:connected] hide-connect-button]])

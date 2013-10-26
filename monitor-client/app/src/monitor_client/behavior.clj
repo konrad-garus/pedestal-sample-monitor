@@ -15,7 +15,7 @@
 (defn toggle-simulation-running [old-value msg]
   (not old-value))
 
-(defn derive-tps [_ {:keys [old-model new-model input-paths] :as v}]
+(defn derive-tps [_ {:keys [old-model new-model input-paths]}]
   (let [input-path (first input-paths)]
     (if-let [[_ old-count] (get-in old-model input-path)]
       (let [[new-time new-count] (get-in new-model input-path)]
@@ -28,6 +28,18 @@
 
 (defn sum-server-counts [_ [time server-counts]]
   [time (reduce #(+ %1 (%2 1)) 0 server-counts)])
+
+(defn server-tps [old {:keys [old-model new-model] :as v}]
+  (if-let [[_ old-count] (get-in old-model [:server :count])]
+    (let [[new-time new-count] (get-in new-model [:server :count])
+          server-names (keys new-count)]
+      (loop [servers server-names 
+             accumulator {}]
+        (let [[server & servers] servers]
+          (if server
+            (recur servers (assoc accumulator server
+                                  (- (new-count server) (old-count server))))
+            [new-time accumulator]))))))
 
 (defn derive-backlog [old {:keys [received processed]}]
   (let [[received-ts received-count] received
@@ -47,6 +59,20 @@
     (when (= last-recd-ts last-processed-ts)
       [[:value [:tps] {:received recd :processed processed}]])))
 
+(defn init-server-history []
+  [[:node-create [:server-tps] :map]])
+
+(defn emit-server-history [{:keys [new-model]}]
+  (let [history (get-in new-model [:server :tps-history])
+        servers (keys (second (first history)))]
+    (loop [servers servers, accum {}]
+      (let [[server & servers] servers]
+        (if server
+          (recur 
+            servers 
+            (assoc accum server (map (fn [[t m]] [t (m server)]) history)))
+          [[:value [:server-tps] accum]])))))
+  
 (defn init-backlog-history []
   [[:node-create [:backlog] :map]])
 
@@ -77,6 +103,8 @@
              [#{[:received :count]} [:received :count-history] derive-history :single-val]
              
              [#{[:server :count]} [:processed :count] sum-server-counts :single-val]
+             [#{[:server :count]} [:server :tps] server-tps]
+             [#{[:server :tps]} [:server :tps-history] derive-history :single-val]
              
              [#{[:processed :count]} [:processed :tps] derive-tps]
              [#{[:processed :tps]} [:processed :tps-history] derive-history :single-val]
@@ -87,13 +115,17 @@
              
              [#{[:backlog :count]} [:backlog :count-history] derive-history :single-val]
              }
-   :emit [{:in #{[:* :tps-history]}
+   :emit [{:in #{[:received :tps-history] [:processed :tps-history]}
            :fn emit-tps-history
            :init init-tps-history}
           
           {:in #{[:backlog :count-history]}
            :fn emit-backlog-history
            :init init-backlog-history}
+          
+          {:in #{[:server :tps-history]}
+           :fn emit-server-history
+           :init init-server-history}
           
           {:in #{[:connected]}
            :fn emit-connected
