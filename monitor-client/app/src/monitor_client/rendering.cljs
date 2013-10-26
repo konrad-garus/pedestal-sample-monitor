@@ -7,56 +7,48 @@
             [jayq.core :refer [$]])
   (:require-macros [monitor-client.html-templates :as html-templates]))
 
-(def tps-chart (atom nil))
+(def charts (atom {}))
 
-(def backlog-chart (atom nil))
+(defn prepare-chart [id]
+  (fn [_ _ _]
+    (let [chart ($/plot 
+                  id 
+                  (clj->js [])
+                  (clj->js {:xaxis { :mode "time"}}))]
+      (swap! charts assoc id chart))))
 
-(defn prepare-tps-chart [_ _ _]
-  (reset! tps-chart ($/plot 
-                 "#received_counts" 
-                 (clj->js [])
-                 (clj->js {:xaxis { :mode "time"}}))))
+(defn render-chart [data max-time id]
+  (let [chart (@charts id)
+        xaxis (get (aget (.getOptions chart) "xaxes") 0)
+        one-minute-ago (- max-time 60000)]
+    (aset xaxis "min" one-minute-ago)
+    (aset xaxis "max" max-time)
+    (.setData chart (clj->js data))
+    (.setupGrid chart)
+    (.draw chart)))
 
 (defn render-tps-chart [_ [_ _ _ new-value] _]
   (when (not-empty new-value)
     (let [{:keys [received processed]} new-value
           data [{:data received :label "Received TPS"}
                 {:data processed :label "Processed TPS"}]
-          xaxis (get (aget (.getOptions @tps-chart) "xaxes") 0)
-          [last-time _] (last received)
-          one-minute-ago (- last-time 60000)]
-      (aset xaxis "min" one-minute-ago)
-      (aset xaxis "max" last-time)
-      (.setData @tps-chart (clj->js data))
-      (.setupGrid @tps-chart)
-      (.draw @tps-chart))))
-
-(defn prepare-backlog-chart [_ _ _]
-  (reset! backlog-chart ($/plot 
-                 "#backlog" 
-                 (clj->js [])
-                 (clj->js {:xaxis { :mode "time"}}))))
+          [last-time _] (last received)]
+      (render-chart data last-time "#received_counts"))))
 
 (defn render-backlog-chart [_ [_ _ _ new-value] _]
   (when (not-empty new-value)
     (let [data [{:data new-value :label "Backlog"}]
-          xaxis (get (aget (.getOptions @backlog-chart) "xaxes") 0)
-          [last-time _] (last new-value)
-          one-minute-ago (- last-time 60000)]
-      (aset xaxis "min" one-minute-ago)
-      (aset xaxis "max" last-time)
-      (.setData @backlog-chart (clj->js data))
-      (.setupGrid @backlog-chart)
-      (.draw @backlog-chart))))
+          [last-time _] (last new-value)]
+      (render-chart data last-time "#backlog"))))
 
 (defn hide-connect-button [_ _ _]
   (.hide ($ :#connect_button)))
 
 (defn render-config []
-  [[:node-create [:tps] prepare-tps-chart]
+  [[:node-create [:tps] (prepare-chart "#received_counts")]
    [:value [:tps] render-tps-chart]
    
-   [:node-create [:backlog] prepare-backlog-chart]
+   [:node-create [:backlog] (prepare-chart "#backlog")]
    [:value [:backlog] render-backlog-chart]
    
    [:transform-enable [:connected] (h/add-send-on-click "connect_button")]
