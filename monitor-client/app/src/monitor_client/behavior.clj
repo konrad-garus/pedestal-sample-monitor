@@ -26,6 +26,9 @@
     (let [history (concat old [val])]
       (take-last history-entries history))))
 
+(defn sum-server-counts [_ [time server-counts]]
+  [time (reduce #(+ %1 (%2 1)) 0 server-counts)])
+
 (defn derive-backlog [old {:keys [received processed]}]
   (let [[received-ts received-count] received
         [processed-ts processed-count] processed]
@@ -72,6 +75,8 @@
              [#{[:received :count]} [:received :tps] derive-tps]
              [#{[:received :tps]} [:received :tps-history] derive-history :single-val]
              [#{[:received :count]} [:received :count-history] derive-history :single-val]
+             
+             [#{[:server :count]} [:processed :count] sum-server-counts :single-val]
              
              [#{[:processed :count]} [:processed :tps] derive-tps]
              [#{[:processed :tps]} [:processed :tps-history] derive-history :single-val]

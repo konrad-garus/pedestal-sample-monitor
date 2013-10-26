@@ -18,9 +18,9 @@
 (def received-mean 10)
 (def received-sigma 2)
 
-(def processed-count (atom 0))
-(def processed-mean 10)
-(def processed-sigma 1)
+(def processed-counters (atom {"gabby" 0 "nicky" 0}))
+(def processed-means (atom {"gabby" 6 "nicky" 4}))
+(def processed-sigmas (atom {"gabby" 3 "nicky" 1}))
 
 (def frequency-ms 1000)
 
@@ -30,10 +30,19 @@
   (swap! step + .5)
   (let [received-mean (+ received-mean (* 5 (Math/sin @step)))]
     (swap! received-count + (positive (rand-normal-int received-mean received-sigma))))
-  (let [to-process (- @received-count @processed-count)
-        delta (positive (rand-normal-int processed-mean processed-sigma))
-        delta (Math/min delta to-process)]
-    (swap! processed-count + delta)))
+  
+  (let [received-count @received-count 
+        processed-sum (reduce #(+ %1 (%2 1)) 0 @processed-counters)]
+    (loop [to-process (- received-count processed-sum) servers (keys @processed-counters)]
+      (let [k (first servers)
+            val (@processed-counters k)
+            delta (->
+                    (rand-normal-int (@processed-means k) (@processed-sigmas k))
+                    positive
+                    (Math/min to-process))]
+        (swap! processed-counters assoc k (+ val delta))
+        (when-not (empty? (rest servers))
+          (recur (- to-process delta) (rest servers)))))))
 
 (defn receive-messages [input-queue]
   (advance-state)
@@ -44,8 +53,9 @@
                                   msg/topic [:received :count]
                                   :value @received-count :tstamp ts-seconds })
       (p/put-message input-queue {msg/type :set-value
-                                  msg/topic [:processed :count]
-                                  :value @processed-count :tstamp ts-seconds })))
+                                  msg/topic [:server :count]
+                                  :tstamp ts-seconds
+                                  :value @processed-counters})))
   
   (platform/create-timeout frequency-ms #(receive-messages input-queue)))
 
