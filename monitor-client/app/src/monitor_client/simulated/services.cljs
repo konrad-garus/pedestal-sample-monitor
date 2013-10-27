@@ -71,7 +71,17 @@
     (receive-messages (:input app)))
   (stop [this]))
 
+(defn push-simulation-params [input-queue]
+  (p/put-message input-queue {msg/type :set
+                              msg/topic [:simulation]
+                              :value @simulation-params}))
+
+(defn connection-established [message input-queue]
+  (reset! connected (:value message))
+  (push-simulation-params input-queue))
+
 (defn services-fn [message input-queue]
   (.log js/console (str "Sending message to server: " message))
   (case (msg/topic message)
-    [:connect] (reset! connected (:value message))))
+    [:connect] (connection-established message input-queue)
+    [:simulation] (reset! simulation-params (:value message)))) 

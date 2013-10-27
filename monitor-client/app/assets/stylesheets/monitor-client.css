@@ -1,17 +1,14 @@
 /* CSS for monitor-client */
 
 #received_counts {
-	width: 600px;
 	height: 200px;
 }
 
 #backlog {
-	width: 600px;
 	height: 200px;
 }
 
 #server_tps {
-	width: 600px;
 	height: 200px;
 }
 

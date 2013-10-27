@@ -25,15 +25,74 @@
 
   <body>
 
-    <div class="container">
+    <div class="container-fluid">
     
-      <div id="received_counts"></div>
-      
-      <div id="backlog"></div>
-      
-      <div id="server_tps"></div>
-      
-      <button id="connect_button">Connect</button>
+      <div class="span8">
+	      <div id="received_counts"></div>
+	      
+	      <div id="backlog"></div>
+	      
+	      <div id="server_tps"></div>
+	      
+	      <button id="connect_button">Connect</button>
+      </div>
+      <div class="span4">
+          <form id="simulation_params" class="form-horizontal">
+              <h2>Simulation Params</h2>
+              <fieldset>
+                  <legend>Received</legend>
+                  <div class="control-group">
+                      <label class="control-label" for="received_mean">Mean</label>
+                      <div class="controls">
+                          <input type="text" id="received_mean">
+                      </div>
+                  </div>
+                  <div class="control-group">
+                      <label class="control-label" for="received_sigma">Sigma</label>
+                      <div class="controls">
+                          <input type="text" id="received_sigma">
+                      </div>
+                  </div>
+                  <div class="control-group">
+                      <label class="control-label" for="received_sine_amplitude">Sine Amplitude</label>
+                      <div class="controls">
+                          <input type="text" id="received_sine_amplitude">
+                      </div>
+                  </div>
+              </fieldset>
+              <fieldset>
+                  <legend>Server: gabby</legend>
+                  <div class="control-group">
+                      <label class="control-label" for="gabby_mean">Mean</label>
+                      <div class="controls">
+                          <input type="text" id="gabby_mean">
+                      </div>
+                  </div>
+                  <div class="control-group">
+                      <label class="control-label" for="gabby_sigma">Sigma</label>
+                      <div class="controls">
+                          <input type="text" id="gabby_sigma">
+                      </div>
+                  </div>
+              </fieldset>
+              <fieldset>
+                  <legend>Server: nicky</legend>
+                  <div class="control-group">
+                      <label class="control-label" for="nicky_mean">Mean</label>
+                      <div class="controls">
+                          <input type="text" id="nicky_mean">
+                      </div>
+                  </div>
+                  <div class="control-group">
+                      <label class="control-label" for="nicky_sigma">Sigma</label>
+                      <div class="controls">
+                          <input type="text" id="nicky_sigma">
+                      </div>
+                  </div>
+              </fieldset>
+              <button id="simulation_update_button">Update</button>
+          </form>
+      </div>
 
       <div id="options"></div>
 

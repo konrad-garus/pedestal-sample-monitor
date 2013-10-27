@@ -89,13 +89,28 @@
   (when (get-in new-model [:connected])
     [[:transform-disable [:connected] :start]]))
 
+(defn init-simulation [_]
+  [[:transform-disable [:simulation] :update]])
+
+(defn emit-simulation [{:keys [new-model old-model]}]
+  (let [new-value [:value [:simulation] (:simulation new-model)]]
+    (if (old-model :simulation)
+      [new-value]
+      [[:transform-enable [:simulation] :update]
+       new-value])))
+
 (defn start-connection [val]
   (when val
     [{msg/topic [:connect] :value true}]))
 
+(defn update-simulation-params [val]
+  (when val
+    [{msg/topic [:simulation] :value val}]))
+
 (def monitor-app
   {:version 2
    :transform [[:set-value [:**] set-count]
+               [:set [:**] #(:value %2)]
                [:start [:connected] connect]]
    :derive #{
              [#{[:received :count]} [:received :tps] derive-tps]
@@ -131,8 +146,11 @@
            :fn emit-connected
            :init init-connected}
           
+          {:in #{[:simulation]} :fn emit-simulation :init init-simulation}
+          
           ; For debug/demo only:
           {:in #{[:*]} :fn (app/default-emitter [:model])}]
    
-   :effect #{[#{[:connected]} start-connection :single-val]}
+   :effect #{[#{[:connected]} start-connection :single-val]
+             [#{[:simulation]} update-simulation-params :single-val]}
    })
