@@ -15,34 +15,40 @@
 (defn positive [n] (Math/max n 0))
 
 (def received-count (atom 0))
-(def received-mean 10)
-(def received-sigma 2)
 
 (def processed-counters (atom {"gabby" 0 "nicky" 0}))
-(def processed-means (atom {"gabby" 6 "nicky" 4}))
-(def processed-sigmas (atom {"gabby" 3 "nicky" 1}))
 
 (def frequency-ms 1000)
+
+(def simulation-params (atom {:received {:mean 10 
+                                         :sigma 2
+                                         :sine-amplitude 5}
+                              :servers {"gabby" {:mean 6
+                                                 :sigma 3}
+                                        "nicky" {:mean 3
+                                                 :sigma 1}}}))
 
 (def connected (atom false))
 
 (defn advance-state []
   (swap! step + .5)
-  (let [received-mean (+ received-mean (* 5 (Math/sin @step)))]
-    (swap! received-count + (positive (rand-normal-int received-mean received-sigma))))
+  (let [{:keys [mean sigma sine-amplitude]} (:received @simulation-params)
+        mean-sine (+ mean (* sine-amplitude (Math/sin @step)))]
+    (swap! received-count + (positive (rand-normal-int mean-sine sigma))))
   
   (let [received-count @received-count 
         processed-sum (reduce #(+ %1 (%2 1)) 0 @processed-counters)]
     (loop [to-process (- received-count processed-sum) servers (keys @processed-counters)]
-      (let [k (first servers)
-            val (@processed-counters k)
+      (let [[server & servers] servers
+            val (@processed-counters server)
+            {:keys [mean sigma]} (get-in @simulation-params [:servers server])
             delta (->
-                    (rand-normal-int (@processed-means k) (@processed-sigmas k))
+                    (rand-normal-int mean sigma)
                     positive
                     (Math/min to-process))]
-        (swap! processed-counters assoc k (+ val delta))
-        (when-not (empty? (rest servers))
-          (recur (- to-process delta) (rest servers)))))))
+        (swap! processed-counters assoc server (+ val delta))
+        (when-not (empty? servers)
+          (recur (- to-process delta) servers))))))
 
 (defn receive-messages [input-queue]
   (advance-state)
